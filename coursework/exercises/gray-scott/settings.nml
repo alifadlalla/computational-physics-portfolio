@@ -1,0 +1,11 @@
+&GRAYSCOTT
+  nx = 1024
+  ny = 1024
+  nsteps = 500
+  sr = 20
+  dt = 1.0
+  Du = 0.1
+  Dv = 0.05
+  fr = 0.014
+  kr = 0.054
+/

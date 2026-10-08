@@ -1,0 +1,13 @@
+# Parameters
+nx: 80 # Number of grid points in the x-direction
+ny: 80  # Number of grid points in the y-direction
+length: 2.0  # Length of the domain
+width: 2.0   # Width of the domain
+time_step: 0.001 # Reduced time step size
+num_steps: 700  # Number of time steps
+nit: 50
+u_freestream: 1.0 # initial velocity_x
+v_freestream: 0.2 # initial velocity_x
+density: 1.0
+viscosity: 0.1
+airfoil_code: "4813"

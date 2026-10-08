@@ -1,0 +1,29 @@
+SYSTEM = N2 molecule
+### Electronic Part ###
+ALGO    = F        ! Electronic minimisation algorithm: Normal (IALGO=38 Davidson), Fast (Davidson+RMM-DIIS), Very_Fast (RMM-DIIS, for MD)
+NELMIN  = 6        ! Minimum number of electronic SC steps (def.=2 but increase for MD or relaxation)
+NELM    = 100      ! Maximum number of electronic SC steps
+EDIFF   = 1E-4     ! Global break condition for the electronic SC-loop (MD calculations: do not use default (too large drift) 1E-4 but 1E-5) 
+MAXMIX  = 40       ! Maximum number of vectors stored in the Broyden/Pulay mixer (reduce the number of electronic iterations for MD's and ionic relaxations)
+##############################
+### Ionic Part ###
+IBRION  = 2        ! How the ions are moved (0--> MD, 1--> close to the local minimum, 2--> difficult relaxation problems, 3--> bad initial guesses, -1--> no update of ions)
+#NFREE   = 2        ! central differences
+NSW     = 100      ! Maximum number of ionic step
+POTIM   = 0.5      ! Time step in fs for IBRION=0, otherwise scaling constant for the forces (important choice when IBRION=1)
+EDIFFG  = -0.010   ! Global break condition for the ionic loop (MD calculations: do not consider this parameter)
+NBLOCK  = 1        ! Pair correlation function and the DOS are calculated every NBLOCK ionic steps (Def. = 1)
+##############################
+### Others considerations ###
+ISTART  = 0        ! Starting from scratch (when WAVECAR does not exist)
+PREC    = NORMAL   ! Precision of the calculations (could be set to LOW for MD calculations after tests)
+ENCUT   = 400      ! Cut-off energy for plane wave basis set in eV
+GGA     = PE      ! Perdew-Burke-Ernzerhof XC (PBE)
+ISPIN   = 2      ! (1) non-spin polarized (2) spin polarized
+MAGMOM  = 20*2.7 1*3 ! Initial magnetic moments for each atom
+NWRITE  = 1        ! What will be written in OUTCAR (0 or 1 minimum, 2 default, 4 debugging)
+LWAVE   =.FALSE.   ! IF orbitals (WAVECAR) are written
+LCHARG  =.FALSE.   ! IF charge densities (CHGCAR and CHG) are written
+ISMEAR  = 1        ! Gaussian smearing (good for semiconductors or insulators with low kpoints)
+SIGMA   = 0.2      ! Width of the smearing in eV
+
