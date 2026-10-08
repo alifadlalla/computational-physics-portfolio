@@ -1,0 +1,262 @@
+# Thermohydraulique 2D VEF Boussinesq #
+# PARALLEL OK 8 #
+# Pour etre ok voire les modifs de P Emonot #
+dimension 2
+
+Pb_Thermohydraulique_Turbulent pb
+Domaine dom
+Mailler dom
+{
+	Pave Entree
+		{
+		Origine 0.0 0.0
+		Nombre_de_Noeuds $Nx $Ny 
+		Longueurs $Lx $Ly_bas
+		}
+		{
+		Bord Inlet    Y = 0.0   0.0 <= X <= $Lx
+		Bord Gauche_1 X = 0.0   0.0 <= Y <= $Y1
+		Bord Droite_1 X = $Lx   0.0 <= Y <= $Y1
+		} , 
+	Pave PE_bas
+		{
+		Origine 0.0 $Y1
+		Nombre_de_Noeuds $Nx_PE_bas $Ny_PE_bas 
+		Longueurs $Lx $Ly_PE
+		}
+		{
+		Bord Gauche_2 X = 0.0 $Y1 <= Y <= $Y2
+		Bord Droite_2 X = $Lx $Y1 <= Y <= $Y2
+		} , 
+	Pave PE
+		{
+		Origine 0.0 $Y2
+		Nombre_de_Noeuds $Nx_PE $Ny_PE 
+		Longueurs $Lx $Ly_PE
+		}
+		{
+		Bord Gauche_3 X = 0.0 $Y2 <= Y <= $Y3
+		Bord Droite_3 X = $Lx $Y2 <= Y <= $Y3
+		} , 
+	Pave PE_haut
+		{
+		Origine 0.0 $Y3
+		Nombre_de_Noeuds $Nx_PE_haut $Ny_PE_haut 
+		Longueurs $Lx $Ly_PE
+		}
+		{
+		Bord Gauche_4 X = 0.0 $Y3 <= Y <= $Y4
+		Bord Droite_4 X = $Lx $Y3 <= Y <= $Y4
+		} , 
+	Pave Haut
+		{
+		Origine 0.0 $Y4
+		Nombre_de_Noeuds $Nx $Ny 
+		Longueurs $Lx $Ly_haut
+		}
+		{
+		Bord Gauche_5 X = 0.0   $Y4 <= Y <= $channel_height
+		Bord Droite_5 X = $Lx   $Y4 <= Y <= $channel_height
+		Bord Outlet   Y = $channel_height   0.0 <= X <= $Lx
+		}
+}
+
+# END MESH #
+# BEGIN PARTITION#
+Partition dom
+{
+	Partition_tool metis { Nb_parts 2 }
+	Larg_joint 2
+	zones_name DOM
+}
+#END PARTITION #
+
+
+VDF dis
+
+
+Scheme_euler_explicit sch
+Read sch
+{
+
+ 	tmax  0.0
+        tmax  0.5
+        dt_min 1.e-20
+        dt_max 1.e-1
+        dt_impr 1.e-2
+        dt_sauv 5.0
+        seuil_statio -1.e-8
+        facsec 1
+        diffusion_implicite 0
+}
+
+Associate pb dom
+Associate pb sch
+Discretize pb dis
+ 
+
+Read pb
+{
+Fluide_Incompressible  
+{
+    beta_th champ_uniforme  1 0.0002
+    mu champ_uniforme  1 9.5e-5
+    rho champ_uniforme  1 755.2
+    cp champ_uniforme  1 4185.0
+    lambda champ_uniforme  1 76
+    gravite champ_uniforme 2 0 -9.81
+    porosites_champ champ_fonc_xyz dom 1 1-$solid*((y>$Y2)*(y<$Y3)*(x>0.0)*(x<$Lx1))*1-$solid*((y>$Y2)*(y<$Y3)*(x>($channel_width-$Lx3))*(x<$channel_width))
+}
+
+	Navier_Stokes_Turbulent
+	{ 
+	    solveur_pression GCP 
+	        {
+			precond ssor { omega 1.5 } 
+			seuil 1e-8
+			impr
+		} 
+	   # solveur_bar petsc cholesky { impr }  #
+	    
+	    convection { amont }
+	    diffusion  { }
+	    sources { Frottement_Poreux { longueur $longueur  c_0 $c_0 c_1 $c_1 } } 
+	    
+	    initial_conditions { vitesse Champ_Uniforme 2 0. 0. }
+	    
+	    boundary_conditions 
+	      { 	
+		Inlet  Frontiere_ouverte_vitesse_imposee Champ_Front_Uniforme  2 0. $v_in
+		Outlet Frontiere_ouverte_pression_imposee Champ_Front_Uniforme 1 6150000   
+		Gauche_1 paroi_fixe
+		Gauche_2 paroi_fixe
+		Gauche_3 paroi_fixe
+		Gauche_4 paroi_fixe
+		Gauche_5 paroi_fixe
+		Droite_1 paroi_fixe
+		Droite_2 paroi_fixe
+		Droite_3 paroi_fixe
+		Droite_4 paroi_fixe
+		Droite_5 paroi_fixe
+            }
+		
+	   Modele_turbulence K_Epsilon 
+	    {
+		Transport_K_Epsilon
+		  {      
+			convection { amont }
+			diffusion { }
+			Sources { Source_Transport_K_Eps_anisotherme { C3_eps 0.9 } , K_eps_conv { longueur $longueur c_1 4.55  } }
+			initial_conditions { K_Eps Champ_Uniforme 2 1.e-2 1.e-1 }
+			boundary_conditions 
+			  {		
+				Inlet  Frontiere_ouverte_K_Eps_impose	Champ_Front_Uniforme 2 0.002 0.005
+				Outlet Frontiere_ouverte K_Eps_ext	Champ_Front_Uniforme 2 0.0002 0.0001
+				Gauche_1 paroi_fixe
+				Gauche_2 paroi_fixe
+				Gauche_3 paroi_fixe
+				Gauche_4 paroi_fixe
+				Gauche_5 paroi_fixe
+				Droite_1 paroi_fixe
+				Droite_2 paroi_fixe
+				Droite_3 paroi_fixe
+				Droite_4 paroi_fixe
+				Droite_5 paroi_fixe						
+								
+		          }
+			
+		 }
+	   
+	      Turbulence_paroi Loi_standard_hydr dt_impr_ustar 0.1			
+	   }
+	}
+	 
+	 
+	 
+	 Convection_Diffusion_Temperature_Turbulent 
+	   {
+                diffusion { }
+                convection { amont }
+                sources { }
+                boundary_conditions 
+                	{
+				Inlet  frontiere_ouverte_temperature_imposee Champ_Front_Uniforme 1  461.15 # 588.15 #
+				Outlet frontiere_ouverte_temperature_imposee Champ_Front_Uniforme 1  461.15 # 588.15 #
+				Gauche_1 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+				Gauche_2 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+				Gauche_3 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+				Gauche_4 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+				Gauche_5 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+				Droite_1 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+				Droite_2 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+				Droite_3 paroi_temperature_imposee Champ_front_Uniforme 1 500
+				Droite_4 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+				Droite_5 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+              		
+		      }
+	      Modele_Turbulence Prandtl 
+	      	      {
+	      		 turbulence_paroi loi_standard_hydr_scalaire Prdt 0.9 # *(x>1) dt_impr_nusselt 1.e-4 #  
+	      	      }
+             initial_conditions 
+                      {
+                        temperature Champ_Uniforme 1 461.15 
+                      }
+	  }
+
+	
+	
+	
+	Post_processings 
+	{  
+	post_dom {
+		Probes
+                	{ 
+
+			
+			 sonde_vbas     nodes vitesse  periode 5.e-1 segment 20 0.0  $Y1 $channel_width  $Y1
+			 sonde_vchannel nodes vitesse  periode 5.e-1 segment 20 $X1  $Y2  $X2   $Y2 
+			 sonde_vhaut    nodes vitesse  periode 5.e-1 segment 20 0.0  $Y3  $channel_width  $Y3
+			 sonde_v_verticale nodes vitesse  periode 5.e-1 segment 50 0.5  0.0  0.5  $channel_height
+			 
+			 sonde_pression1 nodes pression periode 5.e-1   segment 50 0.35  0.0  0.35  $channel_height
+			 sonde_pression2 nodes pression periode 5.e-1   segment 50 0.5  0.0  0.5  $channel_height
+			 sonde_pression3 nodes pression periode 5.e-1   segment 50 0.35  0.0  0.35  $channel_height
+			 
+				
+			 
+			 # sonde_vitesseX nodes vitesseX periode 5.e-1 segment 50 0.0  0.006 $channel_width  0.006 #
+			 # sonde_vitesseY nodes vitesseY periode 5.e-1 segment 50 0.00117  -0.002 0.00117  0.012 #
+			 
+			 # sonde_viscosite viscosite_turbulente periode 5.0e-1 segment 50 0.00139 0. 0.00139 0.012 #
+			 # sonde_temp_fluide_paroi temperature  periode 5.0e-1 segment 50 0.00139 0. 0.00139 0.012 # 
+			} 
+ 
+ 
+	        fichier VenaContracta
+	  	format lata 
+		fields dt_post 0.0005
+		{
+			viscosite_turbulente som
+			vitesse elem 
+			vitesse som
+			
+			# vitesse faces #
+			temperature elem
+			temperature som
+			porosite_volumique som
+			porosite_volumique elem
+			pression elem
+			pression som
+			velocity
+			K som
+			eps som 
+		}
+	}
+ 
+	}
+
+
+}
+Solve pb 
+End

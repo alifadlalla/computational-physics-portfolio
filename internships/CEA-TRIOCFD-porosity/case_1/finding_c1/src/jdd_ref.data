@@ -1,0 +1,350 @@
+# Thermohydraulique 2D VEF Boussinesq #
+# PARALLEL OK 8 #
+# Pour etre ok voire les modifs de P Emonot #
+
+dimension 2
+Pb_Thermohydraulique_Turbulent pb
+Domaine dom
+
+# BEGIN MESH #
+
+Mailler dom
+{
+  Pave Entree_1
+  {
+    Origine $X0 $Y0
+    Nombre_de_Noeuds $Nx1 $Ny
+    Longueurs $Lx1 $Ly
+  }
+  {
+    Bord Inlet_1  Y = $Y0 $X0 <= X <= $X1
+    Bord Gauche_1 X = $X0 $Y0 <= Y <= $Y1
+    Bord PE_b1    Y = $Y1 $X0 <= X <= $X1
+  } ,
+
+  Pave Entree_2
+  {
+    Origine $X1 $Y0
+    Nombre_de_Noeuds $Nx2 $Ny
+    Longueurs $Lx2 $Ly
+  }
+  {
+    Bord Inlet_2 Y = $Y0 $X1 <= X <= $X2
+  } ,
+
+  Pave Entree_3
+  {
+    Origine $X2 $Y0
+    Nombre_de_Noeuds $Nx3 $Ny
+    Longueurs $Lx3 $Ly
+  }
+  {
+    Bord Inlet_3 Y = $Y0 $X2 <= X <= $X3
+    Bord PE_b2   Y = $Y1 $X2 <= X <= $X3
+  } ,
+
+  Pave Entree_4
+  {
+    Origine $X3 $Y0
+    Nombre_de_Noeuds $Nx4 $Ny
+    Longueurs $Lx4 $Ly
+  }
+  {
+    Bord Inlet_4  Y = $Y0 $X3 <= X <= $X4
+    Bord Droite_1 X = $X4 $Y0 <= Y <= $Y1
+    Bord PE_b3    Y = $Y1 $X3 <= X <= $X4
+  } ,
+
+  Pave PE
+  {
+    Origine $X1 $Y1
+    Nombre_de_Noeuds $Nx2 $Ny_PE
+    Longueurs $Lx2 $Ly_PE
+  }
+  {
+    Bord Gauche_2 X = $X1 $Y1 <= Y <= $Y2
+    Bord Droite_2 X = $X2 $Y1 <= Y <= $Y2
+  } ,
+
+  Pave Milieu_1
+  {
+    Origine $X0 $Y2
+    Nombre_de_Noeuds $Nx1 $Ny_mid
+    Longueurs $Lx1 $Ly_mid
+  }
+  {
+    Bord Gauche_3 X = $X0 $Y2 <= Y <= $Y3
+    Bord PE_h1    Y = $Y2 $X0 <= X <= $X1
+  } ,
+
+  Pave Milieu_2
+  {
+    Origine $X1 $Y2
+    Nombre_de_Noeuds $Nx2 $Ny_mid
+    Longueurs $Lx2 $Ly_mid
+  }
+  {
+  } ,
+
+  Pave Milieu_3
+  {
+    Origine $X2 $Y2
+    Nombre_de_Noeuds $Nx3 $Ny_mid
+    Longueurs $Lx3 $Ly_mid
+  }
+  {
+    Bord PE_h2    Y = $Y2 $X2 <= X <= $X3
+    Bord Droite_3 X = $X3 $Y2 <= Y <= $Y3
+  } ,
+
+  Pave Haut_1
+  {
+    Origine $X0 $Y3
+    Nombre_de_Noeuds $Nx1 $Ny
+    Longueurs $Lx1 $Ly
+  }
+  {
+    Bord Outlet_1 Y = $Y4 $X0 <= X <= $X1
+    Bord Gauche_4 X = $X0 $Y3 <= Y <= $Y4
+  } ,
+
+  Pave Haut_2
+  {
+    Origine $X1 $Y3
+    Nombre_de_Noeuds $Nx2 $Ny
+    Longueurs $Lx2 $Ly
+  }
+  {
+    Bord Outlet_2 Y = $Y4 $X1 <= X <= $X2
+  } ,
+
+  Pave Haut_3
+  {
+    Origine $X2 $Y3
+    Nombre_de_Noeuds $Nx3 $Ny
+    Longueurs $Lx3 $Ly
+  }
+  {
+    Bord Outlet_3 Y = $Y4 $X2 <= X <= $X3
+  } ,
+
+  Pave Haut_4
+  {
+    Origine $X3 $Y3
+    Nombre_de_Noeuds $Nx4 $Ny
+    Longueurs $Lx4 $Ly
+  }
+  {
+    Bord Outlet_4 Y = $Y4 $X3 <= X <= $X4
+    Bord Droite_4 X = $X4 $Y3 <= Y <= $Y4
+    Bord PE_h3    Y = $Y3 $X3 <= X <= $X4
+  }
+}
+
+# END MESH #
+
+# BEGIN PARTITION #
+
+Partition dom
+{
+	Partition_tool metis { Nb_parts 2 }
+	Larg_joint 2
+	zones_name DOM
+}
+# END PARTITION #
+
+
+VDF dis
+
+
+Scheme_euler_explicit sch
+Read sch
+{
+	tmax  0.0
+        tmax  0.01
+        dt_min 1.e-20
+        dt_max 1.e-1
+        dt_impr 1.e-2
+        dt_sauv 5.0
+        seuil_statio -1.e-8
+        facsec 1
+        diffusion_implicite 0
+}
+
+Associate pb dom
+Associate pb sch
+Discretize pb dis
+ 
+
+Read pb
+  {
+    Fluide_Incompressible  
+      {
+	    beta_th champ_uniforme  1 0.0002
+	    mu champ_uniforme  1 9.5e-5
+	    rho champ_uniforme  1 755.2
+	    cp champ_uniforme  1 4185.0
+	    lambda champ_uniforme  1 76
+	    gravite champ_uniforme 2 0 -9.81
+	    # we deleted the porosites_champ champ_fonc_xyz #
+
+      }
+
+    Navier_Stokes_Turbulent
+      { 
+         solveur_pression GCP 
+           {
+	     precond ssor { omega 1.5 } 
+	     seuil 1e-10 
+	     impr
+           } 
+	  # solveur_bar petsc cholesky { impr }  #
+	  
+          convection { amont }
+	  diffusion  { }
+	  sources { } # different sources # 
+	  initial_conditions { vitesse Champ_Uniforme 2 0. 0. }
+	  
+	  boundary_conditions 
+            { 	
+		Inlet_1  Frontiere_ouverte_vitesse_imposee Champ_Front_Uniforme  2 0. 2.7
+		Inlet_2  Frontiere_ouverte_vitesse_imposee Champ_Front_Uniforme  2 0. 2.7
+		Inlet_3  Frontiere_ouverte_vitesse_imposee Champ_Front_Uniforme  2 0. 2.7
+		Inlet_4  Frontiere_ouverte_vitesse_imposee Champ_Front_Uniforme  2 0. 2.7
+		Outlet_1 Frontiere_ouverte_pression_imposee Champ_Front_Uniforme 1 6150000  
+		Outlet_2 Frontiere_ouverte_pression_imposee Champ_Front_Uniforme 1 6150000  
+		Outlet_3 Frontiere_ouverte_pression_imposee Champ_Front_Uniforme 1 6150000  
+		Outlet_4 Frontiere_ouverte_pression_imposee Champ_Front_Uniforme 1 6150000  
+		Gauche_1 paroi_fixe
+		Gauche_2 paroi_fixe
+		Gauche_3 paroi_fixe
+		Gauche_4 paroi_fixe
+		Droite_1 paroi_fixe
+		Droite_2 paroi_fixe
+		Droite_3 paroi_fixe
+		Droite_4 paroi_fixe
+		PE_b1    paroi_fixe 
+		PE_b2    paroi_fixe 
+		PE_b3    paroi_fixe 
+		PE_h1    paroi_fixe 							
+		PE_h2    paroi_fixe 	
+		PE_h3    paroi_fixe 						
+	     }
+			      
+	   Modele_turbulence K_Epsilon 
+             {
+		Transport_K_Epsilon
+		  {      
+			convection { amont }
+			diffusion { }
+			Sources { Source_Transport_K_Eps_anisotherme { C3_eps 0.9 } }  # differentes termes sources #
+			initial_conditions { K_Eps Champ_Uniforme 2 1.e-2 1.e-1 }
+			boundary_conditions
+			  { 
+				Inlet_1  Frontiere_ouverte_K_Eps_impose	Champ_Front_Uniforme 2 0.002 0.005
+				Inlet_2  Frontiere_ouverte_K_Eps_impose	Champ_Front_Uniforme 2 0.002 0.005
+				Inlet_3  Frontiere_ouverte_K_Eps_impose	Champ_Front_Uniforme 2 0.002 0.005
+				Inlet_4  Frontiere_ouverte_K_Eps_impose	Champ_Front_Uniforme 2 0.002 0.005
+				Outlet_1 frontiere_ouverte K_Eps_ext	Champ_Front_Uniforme 2 0.0002 0.0001
+				Outlet_2 frontiere_ouverte K_Eps_ext	Champ_Front_Uniforme 2 0.0002 0.0001
+				Outlet_3 frontiere_ouverte K_Eps_ext	Champ_Front_Uniforme 2 0.0002 0.0001
+				Outlet_4 frontiere_ouverte K_Eps_ext	Champ_Front_Uniforme 2 0.0002 0.0001
+				Gauche_1 Paroi
+				Gauche_2 Paroi
+				Gauche_3 Paroi
+				Gauche_4 Paroi
+				Droite_1 Paroi
+				Droite_2 Paroi
+				Droite_3 Paroi
+				Droite_4 Paroi
+				PE_b1    Paroi 
+				PE_b2    Paroi 
+				PE_b3    Paroi 
+				PE_h1    Paroi 							
+				PE_h2    Paroi 	
+				PE_h3    Paroi 	
+			  }
+					
+	 	 }
+			          
+	       Turbulence_paroi Loi_standard_hydr dt_impr_ustar 0.1  
+	   }
+      }
+			
+    Convection_Diffusion_Temperature_Turbulent 
+      {
+        diffusion { }
+        convection { amont }
+        sources { }
+        boundary_conditions 
+	      { 
+		Inlet_1  frontiere_ouverte_temperature_imposee Champ_Front_Uniforme 1  461.15 # 588.15 #
+		Inlet_2  frontiere_ouverte_temperature_imposee Champ_Front_Uniforme 1  461.15 # 588.15 #
+		Inlet_3  frontiere_ouverte_temperature_imposee Champ_Front_Uniforme 1  461.15 # 588.15 #
+		Inlet_4  frontiere_ouverte_temperature_imposee Champ_Front_Uniforme 1  461.15 # 588.15 #
+		Outlet_1 frontiere_ouverte_temperature_imposee Champ_Front_Uniforme 1  461.15 # 588.15 #
+		Outlet_2 frontiere_ouverte_temperature_imposee Champ_Front_Uniforme 1  461.15 # 588.15 #
+		Outlet_3 frontiere_ouverte_temperature_imposee Champ_Front_Uniforme 1  461.15 # 588.15 #
+		Outlet_4 frontiere_ouverte_temperature_imposee Champ_Front_Uniforme 1  461.15 # 588.15 #
+		Gauche_1 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+		Gauche_2 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+		Gauche_3 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+		Gauche_4 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+		Droite_1 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+		Droite_2 paroi_temperature_imposee Champ_front_Uniforme 1 500 
+		Droite_3 paroi_temperature_imposee Champ_front_Uniforme 1 500 
+		Droite_4 paroi_temperature_imposee Champ_front_Uniforme 1 450.35
+		PE_b1    paroi_temperature_imposee Champ_front_Uniforme 1 500 
+		PE_b2    paroi_temperature_imposee Champ_front_Uniforme 1 500 
+		PE_b3    paroi_temperature_imposee Champ_front_Uniforme 1 500 
+		PE_h1    paroi_temperature_imposee Champ_front_Uniforme 1 500 							
+		PE_h2    paroi_temperature_imposee Champ_front_Uniforme 1 500  	
+		PE_h3    paroi_temperature_imposee Champ_front_Uniforme 1 500  
+	      }
+	Modele_Turbulence Prandtl { turbulence_paroi loi_standard_hydr_scalaire Prdt 0.9 # *(x>1) dt_impr_nusselt 1.e-4 #  }
+	initial_conditions { temperature Champ_Uniforme 1 461.15 }
+      }
+
+    Post_processings 
+      {  
+	post_dom 
+	  {
+	    Probes
+              { 
+	         sonde_vbas     nodes vitesse  periode 5.e-1 segment 20 $X0  -0.006 $width  -0.006 
+	         sonde_vchannel nodes vitesse  periode 5.e-1 segment 20 $X1  0.00075  $X3      0.00075 
+	         sonde_vhaut    nodes vitesse  periode 5.e-1 segment 20 $X0  0.006  $channel_width  0.006
+	         sonde_pression nodes pression periode 5.e-1 segment 50 0.00117  $Y0  0.00117  $Y4
+	         sonde_v_verticale nodes vitesse  periode 5.e-1 segment 50 0.00117  $Y0  0.00117  $Y4
+			
+	         
+	         # sonde_vitesseX nodes vitesseX periode 5.e-1 segment 50 $X0  0.006 $channel_width  0.006 #
+	         # sonde_vitesseY nodes vitesseY periode 5.e-1 segment 50 0.00117  -0.002 0.00117  0.012 #
+	         
+		 sonde_viscosite viscosite_turbulente periode 5.0e-1 segment 50 0.00139 0. 0.00139 0.012
+		 sonde_temp_fluide_paroi temperature  periode 5.0e-1 segment 50 0.00139 0. 0.00139 0.012
+	      } 
+ 
+	    fichier VenaContracta
+	    format lata 
+	    fields dt_post 0.0005
+	      {
+		viscosite_turbulente som
+		vitesse elem 
+		vitesse som
+		# vitesse faces #
+		temperature elem
+		temperature som
+		porosite_volumique som
+		porosite_volumique elem
+		pression elem
+		pression som
+		velocity
+		K som
+		eps som 
+	     }   
+         }
+       }
+  }
+Solve pb 
+End
