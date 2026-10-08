@@ -1,0 +1,185 @@
+# PARALLEL NOT #
+dimension 3
+Probleme_Diphasique_4eqs pb
+Domaine dom
+# DEBUT MAILLAGE #
+Mailler dom
+{
+        Pave Entree
+               {
+                Origine 0.  0. 0. 
+                Nombre_de_Noeuds  2 2 51
+                Longueurs 1.4 1.4 4.2
+                }
+                {
+                bord Zbas  Z = 0.   0. <= X <= 1.4   0. <= Y <= 1.4 
+                bord Zhaut Z = 4.2  0. <= X <= 1.4   0. <= Y <= 1.4 
+                bord Xbas  X = 0.   0. <= Y <= 1.4   0. <= Z <= 4.2 
+                bord Xhaut X = 1.4  0. <= Y <= 1.4   0. <= Z <= 4.2 
+                bord Ybas  Y = 0.   0. <= X <= 1.4   0. <= Z <= 4.2 
+                bord Yhaut Y = 1.4  0. <= X <= 1.4   0. <= Z <= 4.2 
+                }
+}
+
+Ecrire_fichier dom dom.geom
+
+# FIN MAILLAGE #
+# DEBUT DECOUPAGE 
+Decouper dom 
+{ 
+partitionneur metis { nb_parts 2 }
+Larg_joint 1
+Nom_Zones DOM  
+}
+end
+FIN DECOUPAGE #
+
+# BEGIN SCATTER
+Scatter DOM.Zones dom
+END SCATTER #
+
+
+Sous_zone channel_1 
+Associate channel_1 dom
+Lire channel_1 {
+          Boite
+          Origine 0. 0. 0. 
+          Cotes   1.4 1.4 4.2
+          }
+
+
+$option_vdf
+$discretisation_choisie dis
+Schema_Implicite_4eqs sch
+
+Lire sch
+{
+        tinit 0.0
+        nb_pas_dt_max 5000
+        tmax 15.
+        dt_min 1.e-6
+        dt_max 10.
+        dt_impr 1.e-5
+        dt_sauv 1.e-5
+        facsec 1.
+        seuil_statio 1.e-20
+	mult_seuils_newton 1.e-9
+        type_solveur  $solveur_choisi
+        Solveur  petsc	cholesky { }
+}
+
+
+
+Associer pb dom
+Associer pb sch
+Discretiser pb dis
+
+
+Lire pb
+{
+   
+   milieu_diphasique_1 {
+      gravite champ_uniforme 3 0. 0. 0.
+      loi_etat_diphasique Loi_StiffenedGas { }
+      Diametre_hyd_champ Champ_Uniforme 1 $Dh
+
+   }
+   
+   
+  Systeme_Diphasique_4eqs
+  {
+     convection_scal { amont }
+     convection_vit { amont_sans_porosite } 
+     diffusion_scal { negligeable }
+     diffusion_vit { negligeable }
+          conditions_initiales {
+            pression       		Champ_Uniforme 1 155.0e+05
+            concentration      		Champ_Uniforme 1 0.0
+            enthalpie_liquide  		Champ_Uniforme 1 1.3e6
+            enthalpie_vapeur   		Champ_Uniforme 1 2.6e+06
+            /*
+            vitesse_massique_liquide    Champ_Uniforme 3 0. 0. 740.
+            vitesse_massique_vapeur     Champ_Uniforme 3 0. 0. 0. */
+	              
+            vitesse_liquide    Champ_Uniforme 3 0. 0. 1.
+            vitesse_vapeur     Champ_Uniforme 3 0. 0. 0. 
+        }
+        conditions_limites
+        {
+            Zbas Entree_fluide_diphasique 
+            {
+                concentration      	    Champ_Front_Uniforme 1 0.
+                enthalpie_liquide    	    Champ_Front_Uniforme 1 1.3e6
+                enthalpie_vapeur   	    Champ_Front_Uniforme 1 2.6e+06
+                /*
+                vitesse_massique_liquide    Champ_Front_Uniforme 3 0. 0. 740.
+            	vitesse_massique_vapeur     Champ_Front_Uniforme 3 0. 0. 0.
+            	*/
+            	vitesse_liquide    Champ_Front_Uniforme 3 0. 0. 1.
+            	vitesse_vapeur     Champ_Front_Uniforme 3 0. 0. 0. 
+            }
+            Zhaut Sortie_libre_diphasique { pression Champ_Front_Uniforme 1 155e+05 }
+
+            Ybas Symetrie
+            Yhaut Symetrie
+            Xbas Symetrie
+            Xhaut Symetrie
+          }
+          sources
+          {
+             $frottement
+          }
+          modelisation
+          {
+            direction_principale_ecoulement 2
+            correlations 
+            {
+              Ecart_Vitesse_HOMOGENE
+            }
+          }
+      }
+   Postraitement
+   {
+			
+		format lata 
+		
+		definition_champs
+		
+		{
+			# donnees recuperees dans flica #
+			
+			V refchamp
+			  { 
+				pb_champ  pb vitesse_melange_z_elem
+			  }
+		        V_son refchamp 
+			  { 
+				pb_champ  pb vitesse_son_melange
+			  }
+		
+		       mach_number transformation 
+		          { 
+				methode formule 
+				expression 1 V/V_son
+				sources_reference { V , V_son } 
+				localisation elem 
+		          } 
+		   
+        	}
+        	
+		Sondes
+		{
+			sonde_Gm grav vitesse_massique_melangeZ periode 100. segment 50 0.7 0.7 0. 0.7 0.7 4.2
+            		sonde_P grav pression periode 100. segment 50 0.7 0.7 0. 0.7 0.7 4.2 
+            		sonde_V grav vitesse_melangeZ periode 100. segment 50 0.7 0.7 0. 0.7 0.7 4.2
+			sonde_M grav mach_number periode 100. segment 50 0.7 0.7 0. 0.7 0.7 4.2
+
+		}
+        	
+   }
+            		
+
+}
+
+Resoudre pb
+ 
