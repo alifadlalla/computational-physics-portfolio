@@ -6,10 +6,9 @@ I'm Ali Fadlallah. These are some projects from my Master's in Physics and Compu
 
 | Project | Files |
 | --- | --- |
-| [TRUST verification, CEA Saclay, 2024](internships/CEA-TRUST-verification/) | Report, presentation and an example notebook comparing a low-Mach solver with analytical solutions. |
 | [TrioCFD porosity validation, CEA Saclay, 2025](internships/CEA-TRIOCFD-porosity/) | Report, presentation, parameter sweeps and flow comparisons. |
-
-[U-Net dose prediction, 2023](internships/unet-dose/): my M1 internship, with TensorFlow/Keras code, report and presentation with later results.
+| [TRUST verification, CEA Saclay, 2024](internships/CEA-TRUST-verification/) | Report, presentation and an example notebook comparing a low-Mach solver with analytical solutions. |
+| [U-Net dose prediction, 2023](internships/unet-dose/) | My M1 internship, with TensorFlow/Keras code, report and presentation with later results. |
 
 ## Coursework
 
